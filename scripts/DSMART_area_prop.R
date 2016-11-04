@@ -1,3 +1,57 @@
+####################################################################################################
+#                                                                                                  #
+#            DSMART with area-proportional sampling... and a bunch of other stuff                  #
+#                                                                                                  #
+#  This version of the DSMART function requires inputs to be projected in a CRS that measures      #
+#  distance in units of metres. Equal area projections are preferred for maximum accuracy, but     # 
+#  UTM can be used across small N/S extents without too much distortion. The function also         #
+#  takes in input data in a different format to the official release; see below for details.       #
+#                                                                                                  #
+#  Usage                                                                                           #
+#  DSMART_AP(covariates = NULL, indata = NULL, pid_field = NULL, sample_rate = NULL,               #
+#            obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE)                           #
+#                                                                                                  #
+#  Arguments                                                                                       #
+#  covariates   RasterStack; A stack of grids or rasters that are surrogates for environmental     #
+#               variables to both guide the C5 model fitting and provide the necessary             #
+#               environmental data for the spatial mapping of predicted soil classes.              #
+#                                                                                                  #
+#  indata       SpatialPolygonsDataFrame; with wide-formatted polygon composition data. Format:    #
+#               * one row per polygon                                                              #
+#               * A numeric unique ID field for polygons                                           #
+#               * A character field for map_code                                                   #
+#               * 1-n character fields for soil classes named CLASS1 to CLASSn                     #
+#               * 1-n numeric fields for soil class percentages named PERC1 to PERCn. PERC1 must   #
+#                 relate to CLASS1, etc.                                                           #
+#               Other columns may exist in the object; they will be ignored. NA values in CLASS    #
+#               and PERC columns are allowed, e.g. in cases where a polygon only contains 1 of n   #
+#               allowable classes. NB: best to readOGR with stringsAsFactors = FALSE.              #
+#                                                                                                  #
+#  pid_field    String; the name of the numeric ID field in indata.                                #
+#                                                                                                  #
+#  sample_rate  Integer; the desired sample rate per square kilometre. Note that the rate has a    #
+#               floor equivalent to 5x the number of CLASS columns.                                #
+#                                                                                                  #
+#  obsdat       Data.frame; Optional extra. Sample points denoting known soil types at particular  #
+#               locations. str(obsdat) should be:                                                  #
+#                   'data.frame':  n obs of 5 variables:                                           #
+#                    $ POLY_NO: int <the polygon in which the site falls - value of pid_field>     #
+#                    $ SAMP_NO: int <the site_ID>                                                  #
+#                    $ SAMP_X : num or int <X coordinate of site>                                  #
+#                    $ SAMP_Y : num or int <Y coordinate of site>                                  #
+#                    $ CLASS  : chr <soil name, must occur in indata>                              #
+#                                                                                                  #
+#  reals        Numeric; number of C5 modeling fitting and mapping realisations to implement.      #
+#                                                                                                  #
+#  cpus         Numeric; number of compute nodes to use. Default is 1.                             #
+#                                                                                                  #
+#  write_files  Logical; default FALSE. Model outputs are saved as rds objects by default. Set     #
+#               this parameter to TRUE to write the c5 model as text, the sampled points and       #
+#               and extracted covariates as a point shapefile, and the predicted map as GeoTiff.   #
+#               Lookup values are embedded in the geotiff metadata.                                #
+#                                                                                                  #
+####################################################################################################
+
 DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sample_rate = NULL,
                        obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE) 
 {
