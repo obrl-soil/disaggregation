@@ -1,3 +1,5 @@
+# this processes all the model realisations into final products. 
+
 DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup = NULL, cpus = 1) {
   
   pb <- txtProgressBar(min = 0, max = 100, style = 3)
@@ -33,6 +35,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
   
   conf_index  <- function(x) { 1 - (x[[1]] - x[[2]]) }
   
+  #debilitatingperfectionism
   nth_fun <- function(x) {
     x <- abs(x)
     if (as.integer(substring(x, seq(nchar(x)), seq(nchar(x))))[nchar(x)] == 1) {
