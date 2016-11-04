@@ -1,3 +1,10 @@
+# this is just the sampling loop from the main dsmart function, its handy to run your input
+# polygons through it beforehand to check for errors. If it fails out, its probably one of a few
+# things:
+#  * wrong data types in columns
+#  * wrong column names
+#  * a row where n classes doesn't match n percs
+
 DSMART_sampler <- function(indata = NULL, pid_field = NULL, sample_rate = NULL, obsdat = NULL) {
 
 nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
