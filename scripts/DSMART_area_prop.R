@@ -1,0 +1,156 @@
+DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sample_rate = NULL,
+                       obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE) 
+{
+  
+  dir.create("dsmartOuts/",          showWarnings = F)
+  dir.create("dsmartOuts/samples",   showWarnings = F)
+  dir.create("dsmartOuts/rasters",   showWarnings = F)
+  dir.create("dsmartOuts/models",    showWarnings = F)
+  dir.create("dsmartOuts/summaries", showWarnings = F)
+  
+  strd   <- paste0(getwd(), "/dsmartOuts/samples/")
+  strr   <- paste0(getwd(), "/dsmartOuts/rasters/")
+  strm   <- paste0(getwd(), "/dsmartOuts/models/")
+  strs   <- paste0(getwd(), "/dsmartOuts/summaries/")
+  crs    <- indata@proj4string
+  nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
+  
+  # used later to set consistent factoring across model runs
+  all_classes  <- na.omit(unique(unlist(indata@data[, grep("CLASS", names(indata@data))])))
+  class_levels <- as.factor(all_classes)
+  
+  pb <- txtProgressBar(min = 0, max = reals, style = 3)
+  
+  for (j in 1:reals) {
+    
+    beginCluster(cpus)
+    sample_points <- list()
+    
+    # sampling loop (one polygon at a time)
+    for (i in 1:length(indata@polygons)) { 
+      
+      polyid  <- indata@data[i, c(pid_field)] 
+      area    <- as.integer(indata@polygons[[i]]@area)
+      
+      # rate - samples per sq km
+      minrate <- nclass * 5
+      nsamp   <- ceiling(area / (1000000 / sample_rate))
+      nsamp   <- max(minrate, nsamp)
+      
+      # NB spsample docs say non-spherical coordinates are required, but it doesn't seem to
+      # matter with type = 'random'
+      spoints <- spsample(indata[i, ], n = nsamp, type = "random", iter = 10)
+      
+      # get proportions for assigning classes to spoints
+      s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])))
+      
+      # NB setting size to = length(spoints) below instead of nsamp handles cases where spsample
+      # fails to place nsamp points - usually only an issue if you switch from random to 
+      # other sampling types, and possibly with very small/irregular polygons
+      classdata <- sample(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])),
+                          size     = length(spoints),
+                          replace  = TRUE,
+                          prob     = s[1, ])
+      
+      data <- data.frame("POLY_NO" = polyid,
+                         "SAMP_NO" = 1:length(spoints),
+                         "SAMP_X"  = spoints@coords[, 1],
+                         "SAMP_Y"  = spoints@coords[, 2],
+                         "CLASS"   = classdata, stringsAsFactors = FALSE)
+      
+      spointsdf <- SpatialPointsDataFrame(spoints, data, proj4string = crs)
+      sample_points[[i]] <- spointsdf
+    }
+    
+    # get all the sampling data for all the polygons for this realisation into one spdf
+    all_samplepoints <- do.call('rbind', sample_points)
+    rm(sample_points)
+    
+    # if aux points are in use, add them to all_samplepoints
+    # NB aux points now have to be supplied with their intersecting poly ID and their site_id;
+    # together these may be non-unique with the sample point IDs generated above. Adding a 99 out
+    # front of the aux SAMP_NOs to handle that for now
+    
+    if (!is.null(obsdat)) {
+      od         <- obsdat
+      names(od)  <- c("POLY_NO", "SAMP_NO", "SAMP_X", "SAMP_Y", "CLASS")
+      od$SAMP_NO <- as.numeric(paste0(99, od$SAMP_NO))
+      od         <- SpatialPointsDataFrame(od[, c('SAMP_X', 'SAMP_Y')], 
+                                           data = od,
+                                           proj4string = crs)
+      all_samplepoints <- rbind(all_samplepoints, od)
+      rm(od)
+    }
+    
+    # sample covariates, appending the sampled data to the SPDF
+    # NB with GSIF::extract, sampling from non-stacked rasters is possible...hmmmm
+    all_samplepoints <- raster::extract(covariates, all_samplepoints, sp = TRUE)
+    
+    # forces all outputs to be on the same scale eg. raster value 1 always equals factor level 1
+    all_samplepoints@data$CLASS         <- as.factor(all_samplepoints@data$CLASS) 
+    levels(all_samplepoints@data$CLASS) <- class_levels
+    
+    # ditch any points with NA values in the extracted covariate data, C5.0 does not approve
+    all_samplepoints <- all_samplepoints[complete.cases(all_samplepoints@data), ]
+    
+    # generate decision tree 
+    res <- C5.0(all_samplepoints@data[ , c(6:ncol(all_samplepoints@data))],
+                y = all_samplepoints@data$CLASS)
+    
+    # Generate lookup table to match GeoTIFF values
+    lookup <- data.frame("ID" = as.integer(as.factor(res$levels)), "CLASS" = as.factor(res$levels)) 
+    
+    # make prediction map
+    r1 <- clusterR(na.omit(covariates), raster::predict, args = list(res))
+    
+    # factorise r1
+    levels(r1) <- lookup
+    
+    # save for later (readALL or your raster rds' will just be pointers to temp files)
+    saveRDS(all_samplepoints, paste0(strd, 'samples_', j, '.rds'))
+    saveRDS(res, paste0(strm, 'C5_model_', j, '.rds'))
+    suppressWarnings(saveRDS(readAll(r1), paste0(strr, 'map_', j, '.rds')))
+    
+    # make it optional to write rasters and shapefiles etc
+    if (write_files == TRUE) {
+      
+      # decision tree to plain text tho lets bh the rds is more useful
+      out <- capture.output(summary(res))
+      f2  <- paste0(strm, "C5_model_", j, ".txt")
+      cat(out, file = f2, sep = "\n", append = TRUE)
+      
+      # write probability map from this realisation to GeoTIFF (lookup values are embedded)
+      nme <- paste0(strr, 'map_', j, '.tif')
+      writeRaster(r1, filename = nme, format = "GTiff", overwrite = T, datatype = "INT2S", 
+                  NAflag = -9999)
+      
+      # make a lookup table for all_samplepoints covariate column names, because they're about
+      # to get severely abbreviated for writing to shp
+      cov_LUT_nm <- paste0(strd, 'covariate_LUT.csv')
+      cov_names <- names(all_samplepoints[6:ncol(all_samplepoints)])
+      cov_shpnames <- paste0('COV_', 1:length(cov_names))
+      if (!file.exists(cov_LUT_nm)) {
+        cov_LUT <- data.frame("COV_NAMES" = cov_names, "SHPCOL_NAMES" = cov_shpnames)
+        write.table(cov_LUT, file=cov_LUT_nm, 
+                    sep = ', ', quote = FALSE, col.names = TRUE, row.names = FALSE)
+      }
+      
+      # abbreviate colnames and write sample data from this realisation to a shapefile
+      names(all_samplepoints)[6:ncol(all_samplepoints)] <- cov_shpnames
+      spname <- paste0('samplepoints_', j)
+      writeOGR(all_samplepoints,
+               dsn = paste0(getwd(), "/dsmartOuts/samples"),
+               layer = spname,
+               driver = 'ESRI Shapefile',
+               overwrite = TRUE)
+      
+    }
+    # tidy tidy
+    rm(r1)
+    endCluster()
+    setTxtProgressBar(pb, j)
+  }
+  
+  close(pb)
+  message(paste0("DSMART outputs can be located at: ", getwd(), "/dsmartOuts/"))
+}

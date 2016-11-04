@@ -1,0 +1,56 @@
+DSMART_sampler <- function(indata = NULL, pid_field = NULL, sample_rate = NULL, obsdat = NULL) {
+
+nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
+crs    <- indata@proj4string
+sample_points <- list()
+
+# sampling loop (one polygon at a time)
+for (i in 1:length(indata@polygons)) { 
+    
+    polyid  <- indata@data[i, c(pid_field)] 
+    area    <- as.integer(indata@polygons[[i]]@area)
+    
+    # samples per sq km
+    minrate <- nclass * 5
+    nsamp   <- ceiling(area / (1000000 / sample_rate))
+    nsamp   <- max(minrate, nsamp)
+    
+    # sample dat polygon
+    spoints <- spsample(indata[i, ], n = nsamp, type = "random", iter = 10)
+    
+    # get proportions for assigning classes to spoints
+    s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])))
+    
+    # assign classes to spoints
+    classdata <- sample(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])),
+                        size = length(spoints), 
+                        replace = TRUE, 
+                        prob = s[1, ])
+    
+    data <- data.frame("POLY_NO" = polyid,
+                       "SAMP_NO" = 1:length(spoints),
+                       "SAMP_X"  = spoints@coords[, 1],
+                       "SAMP_Y"  = spoints@coords[, 2],
+                       "CLASS"   = classdata, stringsAsFactors = FALSE)
+    
+    spointsdf <- SpatialPointsDataFrame(spoints, data, proj4string = crs)
+    sample_points[[i]] <- spointsdf
+  }
+
+# get all the sampling data for all the polygons for this realisation into one spdf
+all_samplepoints <- do.call('rbind', sample_points)
+
+if (!is.null(obsdat)) {
+    od         <- obsdat
+    names(od)  <- c("POLY_NO", "SAMP_NO", "SAMP_X", "SAMP_Y", "CLASS")
+    od$SAMP_NO <- as.numeric(paste0(99, od$SAMP_NO))
+    od         <- SpatialPointsDataFrame(od[, c('SAMP_X', 'SAMP_Y')],  
+                                         data = od,
+                                         proj4string = crs)
+    all_samplepoints <- rbind(all_samplepoints, od)
+    rm(od)
+  }
+
+return(all_samplepoints)
+
+}
