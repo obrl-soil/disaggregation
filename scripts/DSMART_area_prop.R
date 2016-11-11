@@ -178,6 +178,13 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       writeRaster(r1, filename = nme, format = "GTiff", overwrite = T, datatype = "INT2S", 
                   NAflag = -9999)
       
+      # may as well keep the class lookup in txt as can't use it in QGIS
+        if (j == 1) {
+          write.table(lookup, paste0(strr, 'class_lookup.txt'), 
+                      col.names = TRUE, row.names = FALSE,
+                      quote = FALSE, sep = ",")
+        }
+            
       # make a lookup table for all_samplepoints covariate column names, because they're about
       # to get severely abbreviated for writing to shp
       cov_LUT_nm <- paste0(strd, 'covariate_LUT.csv')
