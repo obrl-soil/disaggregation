@@ -60,11 +60,13 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
   assign('realn',   realn,   envir = .GlobalEnv)
   
   # 1. get a stack of predicted class counts (NA cells accounted for)
+  # object 'counts' will require (2 * ncells * nreals) bytes of storage space
   counts <- clusterR(reals, calc, args = list(fun = class_count), export = 'classes', datatype = 'INT2S')
   assign('counts', counts, envir = .GlobalEnv)
   setTxtProgressBar(pb, 25)
   
   # 2. express that stack as a probability
+  # object 'counts' will require (4 * ncells * nreals) bytes of storage space
   probs <- clusterR(na.omit(counts), calc, args = list(fun = class_prop), export = 'realn', datatype = 'FLT4S')
   assign('probs', probs, envir = .GlobalEnv)
   setTxtProgressBar(pb, 50)
@@ -154,8 +156,8 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
   }
   
   # Save clusterR outputs as rds objects where possible, GTiff where RAM limits prevent this
-  if (file.size(gsub('grd', 'gri', counts@file@name)) > (memory.size() * 1048576)) {
-    
+  # FLT4S .gri file sizes are about the same as object.size(readAll(object))
+  if ((file.size(gsub('grd', 'gri', counts@file@name)) * 2) > (memory.size() * 1048576) {
     message("class counts object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
@@ -165,14 +167,12 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
                 NAflag = -9999,
                 datatype = 'INT2S',
                 overwrite = TRUE)
-    
   } else {
   saveRDS(readAll(counts), paste0(rds_dir, 'class_counts.rds'))
   rm(counts)
   }
   
-  if (file.size(gsub('grd', 'gri', probs@file@name)) > (memory.size() * 1048576)) {
-    
+  if (file.size(gsub('grd', 'gri', probs@file@name)) > (memory.size() * 1048576)) { 
     message("probabilities object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
@@ -182,14 +182,12 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
                 NAflag = -9999,
                 datatype = 'FLT4s',
                 overwrite = TRUE)
-    
   } else {
   saveRDS(readAll(probs), paste0(rds_dir, 'class_probs.rds'))
   rm(probs)
   }
   
-  if (file.size(gsub('grd', 'gri', counts_ord@file@name)) > (memory.size() * 1048576)) {
-    
+  if ((file.size(gsub('grd', 'gri', counts_ord@file@name)) * 2) > (memory.size() * 1048576) {
     message("ordered classes object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
@@ -206,7 +204,6 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
   }
   
   if (file.size(gsub('grd', 'gri', probs_ord@file@name)) > (memory.size() * 1048576)) {
-    
     message("ordered probabilities object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
@@ -216,7 +213,6 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
                 NAflag = -9999,
                 datatype = 'FLT4S',
                 overwrite = TRUE)
-    
   } else {
   saveRDS(readAll(probs_ord),  paste0(rds_dir, 'class_probs_ordered.rds'))
   rm(probs_ord)
@@ -232,7 +228,6 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
                 NAflag = -9999,
                 datatype = 'FLT4S',
                 overwrite = TRUE)
-    
   } else {
   saveRDS(readAll(confus_ind),  paste0(rds_dir, 'confusion_index_1_2.rds'))
   rm(confus_ind)
