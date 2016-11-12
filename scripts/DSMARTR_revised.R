@@ -60,19 +60,19 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
   assign('realn',   realn,   envir = .GlobalEnv)
   
   # 1. get a stack of predicted class counts (NA cells accounted for)
-  counts <- clusterR(reals, calc, args = list(fun = class_count), export = 'classes')
+  counts <- clusterR(reals, calc, args = list(fun = class_count), export = 'classes', datatype = 'INT2S')
   assign('counts', counts, envir = .GlobalEnv)
   setTxtProgressBar(pb, 25)
   
   # 2. express that stack as a probability
-  probs <- clusterR(na.omit(counts), calc, args = list(fun = class_prop), export = 'realn')
+  probs <- clusterR(na.omit(counts), calc, args = list(fun = class_prop), export = 'realn', datatype = 'FLT4S')
   assign('probs', probs, envir = .GlobalEnv)
   setTxtProgressBar(pb, 50)
   
   # 3. sort counts and probs by most to least probable, by cell, get confusion index for 1 and 2 mp
-  counts_ord  <- clusterR(na.omit(counts), calc, args = list(fun = class_order))
-  probs_ord   <- clusterR(na.omit(probs),  calc, args = list(fun = probs_order))
-  confus_ind  <- clusterR(na.omit(probs_ord), fun = conf_index)
+  counts_ord  <- clusterR(na.omit(counts), calc, args = list(fun = class_order), datatype = 'INT2S')
+  probs_ord   <- clusterR(na.omit(probs),  calc, args = list(fun = probs_order), datatype = 'FLT4S')
+  confus_ind  <- clusterR(na.omit(probs_ord), fun = conf_index, datatype = 'FLT4S')
   assign('counts_ord', counts_ord, envir = .GlobalEnv)
   assign('probs_ord',  probs_ord,  envir = .GlobalEnv)
   assign('confus_ind', confus_ind, envir = .GlobalEnv)
@@ -153,17 +153,90 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     rm(probs_list)
   }
   
-  # Save clusterR outputs as rds objects
+  # Save clusterR outputs as rds objects where possible, GTiff where RAM limits prevent this
+  if (file.size(gsub('grd', 'gri', counts@file@name)) > (memory.size() * 1048576)) {
+    
+    message("class counts object too large to fit in memory. Writing GTiff instead of RDS")
+    dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
+    tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
+    writeRaster(counts, 
+                filename = paste0(tif_dir, "class_counts.tif"),
+                format = 'GTiff',
+                NAflag = -9999,
+                datatype = 'INT2S',
+                overwrite = TRUE)
+    
+  } else {
   saveRDS(readAll(counts), paste0(rds_dir, 'class_counts.rds'))
   rm(counts)
+  }
+  
+  if (file.size(gsub('grd', 'gri', probs@file@name)) > (memory.size() * 1048576)) {
+    
+    message("probabilities object too large to fit in memory. Writing GTiff instead of RDS")
+    dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
+    tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
+    writeRaster(counts, 
+                filename = paste0(tif_dir, "class_probs.tif"),
+                format = 'GTiff',
+                NAflag = -9999,
+                datatype = 'FLT4s',
+                overwrite = TRUE)
+    
+  } else {
   saveRDS(readAll(probs), paste0(rds_dir, 'class_probs.rds'))
   rm(probs)
+  }
+  
+  if (file.size(gsub('grd', 'gri', counts_ord@file@name)) > (memory.size() * 1048576)) {
+    
+    message("ordered classes object too large to fit in memory. Writing GTiff instead of RDS")
+    dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
+    tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
+    writeRaster(counts, 
+                filename = paste0(tif_dir, "class_counts_ordered.tif"),
+                format = 'GTiff',
+                NAflag = -9999,
+                datatype = 'INT2S',
+                overwrite = TRUE)
+    
+  } else {
   saveRDS(readAll(counts_ord), paste0(rds_dir, 'class_counts_ordered.rds'))
   rm(counts_ord)
+  }
+  
+  if (file.size(gsub('grd', 'gri', probs_ord@file@name)) > (memory.size() * 1048576)) {
+    
+    message("ordered probabilities object too large to fit in memory. Writing GTiff instead of RDS")
+    dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
+    tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
+    writeRaster(counts, 
+                filename = paste0(tif_dir, "class_probs_ordered.tif"),
+                format = 'GTiff',
+                NAflag = -9999,
+                datatype = 'FLT4S',
+                overwrite = TRUE)
+    
+  } else {
   saveRDS(readAll(probs_ord),  paste0(rds_dir, 'class_probs_ordered.rds'))
   rm(probs_ord)
-  saveRDS(readAll(confus_ind),  paste0(rds_dir, 'confusion_index.rds'))
+  }
+  
+  if (file.size(gsub('grd', 'gri', confus_ind@file@name)) > (memory.size() * 1048576)) {
+    message("confusion index too large to fit in memory. Writing GTiff instead of RDS")
+    dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
+    tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
+    writeRaster(counts, 
+                filename = paste0(tif_dir, "confusion_index_1_2.tif"),
+                format = 'GTiff',
+                NAflag = -9999,
+                datatype = 'FLT4S',
+                overwrite = TRUE)
+    
+  } else {
+  saveRDS(readAll(confus_ind),  paste0(rds_dir, 'confusion_index_1_2.rds'))
   rm(confus_ind)
+  }
   endCluster()
   
   setTxtProgressBar(pb, 100)
