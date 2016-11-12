@@ -56,21 +56,21 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
                        obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE) 
 {
   
-  dir.create("dsmartOuts/",          showWarnings = F)
-  dir.create("dsmartOuts/samples",   showWarnings = F)
-  dir.create("dsmartOuts/rasters",   showWarnings = F)
-  dir.create("dsmartOuts/models",    showWarnings = F)
-  dir.create("dsmartOuts/summaries", showWarnings = F)
+  dir.create('dsmartOuts/',          showWarnings = F)
+  dir.create('dsmartOuts/samples',   showWarnings = F)
+  dir.create('dsmartOuts/rasters',   showWarnings = F)
+  dir.create('dsmartOuts/models',    showWarnings = F)
+  dir.create('dsmartOuts/summaries', showWarnings = F)
   
-  strd   <- paste0(getwd(), "/dsmartOuts/samples/")
-  strr   <- paste0(getwd(), "/dsmartOuts/rasters/")
-  strm   <- paste0(getwd(), "/dsmartOuts/models/")
-  strs   <- paste0(getwd(), "/dsmartOuts/summaries/")
+  strd   <- paste0(getwd(), '/dsmartOuts/samples/')
+  strr   <- paste0(getwd(), '/dsmartOuts/rasters/')
+  strm   <- paste0(getwd(), '/dsmartOuts/models/')
+  strs   <- paste0(getwd(), '/dsmartOuts/summaries/')
   crs    <- indata@proj4string
   nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
   
   # used later to set consistent factoring across model runs
-  all_classes  <- na.omit(unique(unlist(indata@data[, grep("CLASS", names(indata@data))])))
+  all_classes  <- na.omit(unique(unlist(indata@data[, grep('CLASS', names(indata@data))])))
   class_levels <- as.factor(all_classes)
   
   pb <- txtProgressBar(min = 0, max = reals, style = 3)
@@ -93,7 +93,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       
       # NB spsample docs say non-spherical coordinates are required, but it doesn't seem to
       # matter with type = 'random'
-      spoints <- spsample(indata[i, ], n = nsamp, type = "random", iter = 10)
+      spoints <- spsample(indata[i, ], n = nsamp, type = 'random', iter = 10)
       
       # get proportions for assigning classes to spoints
       s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])))
@@ -106,11 +106,11 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
                           replace  = TRUE,
                           prob     = s[1, ])
       
-      data <- data.frame("POLY_NO" = polyid,
-                         "SAMP_NO" = 1:length(spoints),
-                         "SAMP_X"  = spoints@coords[, 1],
-                         "SAMP_Y"  = spoints@coords[, 2],
-                         "CLASS"   = classdata, stringsAsFactors = FALSE)
+      data <- data.frame('POLY_NO' = polyid,
+                         'SAMP_NO' = 1:length(spoints),
+                         'SAMP_X'  = spoints@coords[, 1],
+                         'SAMP_Y'  = spoints@coords[, 2],
+                         'CLASS'   = classdata, stringsAsFactors = FALSE)
       
       spointsdf <- SpatialPointsDataFrame(spoints, data, proj4string = crs)
       sample_points[[i]] <- spointsdf
@@ -127,7 +127,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
     
     if (!is.null(obsdat)) {
       od         <- obsdat
-      names(od)  <- c("POLY_NO", "SAMP_NO", "SAMP_X", "SAMP_Y", "CLASS")
+      names(od)  <- c('POLY_NO', 'SAMP_NO', 'SAMP_X', 'SAMP_Y', 'CLASS')
       od$SAMP_NO <- as.numeric(paste0(99, od$SAMP_NO))
       od         <- SpatialPointsDataFrame(od[, c('SAMP_X', 'SAMP_Y')], 
                                            data = od,
@@ -152,10 +152,12 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
                 y = all_samplepoints@data$CLASS)
     
     # Generate lookup table to match GeoTIFF values
-    lookup <- data.frame("ID" = as.integer(as.factor(res$levels)), "CLASS" = as.factor(res$levels)) 
+    lookup <- data.frame('ID' = as.integer(as.factor(res$levels)), 'CLASS' = as.factor(res$levels)) 
     
-    # make prediction map
-    r1 <- clusterR(na.omit(covariates), raster::predict, args = list(res))
+    # make prediction map 
+    # The resulting temp file for each realisation will require (512 x ncells) bytes of 
+    # storage space in temp folder (C:/Users/username/AppData/Local/Temp by default on Win) 
+    r1 <- clusterR(na.omit(covariates), raster::predict, args = list(res), datatype = 'INT2S')
     
     # factorise r1
     levels(r1) <- lookup
@@ -170,19 +172,19 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       
       # decision tree to plain text tho lets bh the rds is more useful
       out <- capture.output(summary(res))
-      f2  <- paste0(strm, "C5_model_", j, ".txt")
-      cat(out, file = f2, sep = "\n", append = TRUE)
+      f2  <- paste0(strm, 'C5_model_', j, '.txt')
+      cat(out, file = f2, sep = '\n', append = TRUE)
       
       # write probability map from this realisation to GeoTIFF (lookup values are embedded)
       nme <- paste0(strr, 'map_', j, '.tif')
-      writeRaster(r1, filename = nme, format = "GTiff", overwrite = T, datatype = "INT2S", 
+      writeRaster(r1, filename = nme, format = 'GTiff', overwrite = T, datatype = 'INT2S', 
                   NAflag = -9999)
       
       # may as well keep the class lookup in txt as can't use it in QGIS
         if (j == 1) {
           write.table(lookup, paste0(strr, 'class_lookup.txt'), 
                       col.names = TRUE, row.names = FALSE,
-                      quote = FALSE, sep = ",")
+                      quote = FALSE, sep = ',')
         }
             
       # make a lookup table for all_samplepoints covariate column names, because they're about
@@ -191,7 +193,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       cov_names <- names(all_samplepoints[6:ncol(all_samplepoints)])
       cov_shpnames <- paste0('COV_', 1:length(cov_names))
       if (!file.exists(cov_LUT_nm)) {
-        cov_LUT <- data.frame("COV_NAMES" = cov_names, "SHPCOL_NAMES" = cov_shpnames)
+        cov_LUT <- data.frame('COV_NAMES' = cov_names, 'SHPCOL_NAMES' = cov_shpnames)
         write.table(cov_LUT, file=cov_LUT_nm, 
                     sep = ', ', quote = FALSE, col.names = TRUE, row.names = FALSE)
       }
@@ -200,7 +202,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       names(all_samplepoints)[6:ncol(all_samplepoints)] <- cov_shpnames
       spname <- paste0('samplepoints_', j)
       writeOGR(all_samplepoints,
-               dsn = paste0(getwd(), "/dsmartOuts/samples"),
+               dsn = paste0(getwd(), '/dsmartOuts/samples'),
                layer = spname,
                driver = 'ESRI Shapefile',
                overwrite = TRUE)
@@ -213,5 +215,5 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
   }
   
   close(pb)
-  message(paste0("DSMART outputs can be located at: ", getwd(), "/dsmartOuts/"))
+  message(paste0('DSMART outputs can be located at: ', getwd(), '/dsmartOuts/'))
 }
