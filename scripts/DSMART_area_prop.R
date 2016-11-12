@@ -155,7 +155,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
     lookup <- data.frame('ID' = as.integer(as.factor(res$levels)), 'CLASS' = as.factor(res$levels)) 
     
     # make prediction map 
-    # The resulting temp file for each realisation will require (512 x ncells) kilobytes of 
+    # The resulting temp file for each realisation will require (2 x ncells) bytes of 
     # storage space in temp folder (C:/Users/username/AppData/Local/Temp by default on Win) 
     r1 <- clusterR(na.omit(covariates), raster::predict, args = list(res), datatype = 'INT2S')
     
