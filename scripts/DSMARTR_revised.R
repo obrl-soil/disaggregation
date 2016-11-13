@@ -180,7 +180,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
                 filename = paste0(tif_dir, "class_probs.tif"),
                 format = 'GTiff',
                 NAflag = -9999,
-                datatype = 'FLT4s',
+                datatype = 'FLT4S',
                 overwrite = TRUE)
   } else {
   saveRDS(readAll(probs), paste0(rds_dir, 'class_probs.rds'))
