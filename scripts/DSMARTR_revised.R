@@ -176,7 +176,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     message("probabilities object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
-    writeRaster(counts, 
+    writeRaster(probs, 
                 filename = paste0(tif_dir, "class_probs.tif"),
                 format = 'GTiff',
                 NAflag = -9999,
@@ -191,7 +191,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     message("ordered classes object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
-    writeRaster(counts, 
+    writeRaster(counts_ordered, 
                 filename = paste0(tif_dir, "class_counts_ordered.tif"),
                 format = 'GTiff',
                 NAflag = -9999,
@@ -207,7 +207,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     message("ordered probabilities object too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
-    writeRaster(counts, 
+    writeRaster(probs_ordered, 
                 filename = paste0(tif_dir, "class_probs_ordered.tif"),
                 format = 'GTiff',
                 NAflag = -9999,
@@ -222,7 +222,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     message("confusion index too large to fit in memory. Writing GTiff instead of RDS")
     dir.create('dsmartOuts/summaries/bigouts/', showWarnings = F)
     tif_dir   <- paste0(getwd(), '/dsmartOuts/summaries/bigouts/')
-    writeRaster(counts, 
+    writeRaster(confus_ind, 
                 filename = paste0(tif_dir, "confusion_index_1_2.tif"),
                 format = 'GTiff',
                 NAflag = -9999,
