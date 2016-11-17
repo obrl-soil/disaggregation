@@ -15,7 +15,7 @@ DSMARTR_2 <- function(realstack = NULL, n_mpmaps = 3, class_maps = FALSE, lookup
     }
   }
   
-  class_prop  <- function(x) { x / realn }
+  class_prop  <- function(x) { round((x / realn), 3) }
   
   class_order  <- function(x) {
     if (is.na(sum(x))) {
