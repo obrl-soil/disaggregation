@@ -7,7 +7,7 @@
 #  implying that the most-probable soil is far more probable than any other.                       #
 #                                                                                                  #
 #  Usage                                                                                           #
-#  confusion_index(class_probabilities = NULL, cpus = 1)                                           #
+#  eval_confind(class_probabilities = NULL, cpus = 1)                                           #
 #                                                                                                  #
 #  Arguments                                                                                       #
 #  class_probabilities  RasterStack; 'class_probabilities_ranked.tif'; the tallied and sorted soil #
@@ -17,7 +17,7 @@
 #                                                                                                  #
 ####################################################################################################
 
-confusion_index <- function(class_probabilities = NULL, cpus = 1) {
+eval_confind <- function(class_probabilities = NULL, cpus = 1) {
   
   conf_index  <- function(x) {1 - (x[[1]] - x[[2]])}
 
