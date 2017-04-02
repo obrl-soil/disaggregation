@@ -56,11 +56,11 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
                        obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE) 
 {
   
-  dir.create('dsmartOuts/',          showWarnings = F)
-  dir.create('dsmartOuts/samples',   showWarnings = F)
-  dir.create('dsmartOuts/rasters',   showWarnings = F)
-  dir.create('dsmartOuts/models',    showWarnings = F)
-  dir.create('dsmartOuts/summaries', showWarnings = F)
+  dir.create('dsmartOuts/',          showWarnings = FALSE)
+  dir.create('dsmartOuts/samples',   showWarnings = FALSE)
+  dir.create('dsmartOuts/rasters',   showWarnings = FALSE)
+  dir.create('dsmartOuts/models',    showWarnings = FALSE)
+  dir.create('dsmartOuts/summaries', showWarnings = FALSE)
   
   strd   <- paste0(getwd(), '/dsmartOuts/samples/')
   strr   <- paste0(getwd(), '/dsmartOuts/rasters/')
@@ -78,7 +78,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
   for (j in 1:reals) {
     
     beginCluster(cpus)
-    sample_points <- list()
+    sample_points <- vector('list', length = length(polygons))
     
     # sampling loop (one polygon at a time)
     for (i in 1:length(indata@polygons)) { 
@@ -123,8 +123,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
     # if aux points are in use, add them to all_samplepoints
     # NB aux points now have to be supplied with their intersecting poly ID and their site_id;
     # together these may be non-unique with the sample point IDs generated above. Adding a 99 out
-    # front of the aux SAMP_NOs to handle that for now
-    
+    # front of the aux SAMP_NOs to handle that for now    
     if (!is.null(obsdat)) {
       od         <- obsdat
       names(od)  <- c('POLY_NO', 'SAMP_NO', 'SAMP_X', 'SAMP_Y', 'CLASS')
@@ -177,7 +176,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       
       # write probability map from this realisation to GeoTIFF (lookup values are embedded)
       nme <- paste0(strr, 'map_', j, '.tif')
-      writeRaster(r1, filename = nme, format = 'GTiff', overwrite = T, datatype = 'INT2S', 
+      writeRaster(r1, filename = nme, format = 'GTiff', overwrite = TRUE, datatype = 'INT2S', 
                   NAflag = -9999)
       
       # may as well keep the class lookup in txt as can't use it in QGIS
