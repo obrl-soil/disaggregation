@@ -150,7 +150,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
   }
   writeRaster(ordered,
               filename  = paste0(strs, 'class_predictions_ranked.tif'),
-              dataype   = 'INT2S',
+              datatype   = 'INT2S',
               format    = 'GTiff',
               NAflag    = -9999,
               overwrite = TRUE)
