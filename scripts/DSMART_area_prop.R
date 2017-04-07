@@ -8,8 +8,8 @@
 #  takes in input data in a different format to the official release; see below for details.       #
 #                                                                                                  #
 #  Usage                                                                                           #
-#  DSMART_AP(covariates = NULL, indata = NULL, pid_field = NULL, sample_rate = NULL,               #
-#            obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE)                           #
+#  DSMART_AP(covariates = NULL, indata = NULL, pid_field = NULL,  obsdat = NULL, reals = NULL,     #
+#            cpus = 1, write_files = FALSE)                                                        #
 #                                                                                                  #
 #  Arguments                                                                                       #
 #  covariates   RasterStack; A stack of grids or rasters that are surrogates for environmental     #
@@ -28,9 +28,6 @@
 #               allowable classes. NB: best to readOGR with stringsAsFactors = FALSE.              #
 #                                                                                                  #
 #  pid_field    String; the name of the numeric ID field in indata.                                #
-#                                                                                                  #
-#  sample_rate  Integer; the desired sample rate per square kilometre. Note that the rate has a    #
-#               floor equivalent to 5x the number of CLASS columns.                                #
 #                                                                                                  #
 #  obsdat       Data.frame; Optional extra. Sample points denoting known soil types at particular  #
 #               locations. str(obsdat) should be:                                                  #
@@ -52,7 +49,7 @@
 #                                                                                                  #
 ####################################################################################################
 
-DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sample_rate = NULL,
+DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
                        obsdat = NULL, reals = NULL, cpus = 1, write_files = FALSE) 
 {
   
@@ -60,18 +57,20 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
   dir.create('dsmartOuts/samples',   showWarnings = FALSE)
   dir.create('dsmartOuts/rasters',   showWarnings = FALSE)
   dir.create('dsmartOuts/models',    showWarnings = FALSE)
-  dir.create('dsmartOuts/summaries', showWarnings = FALSE)
   
   strd   <- paste0(getwd(), '/dsmartOuts/samples/')
   strr   <- paste0(getwd(), '/dsmartOuts/rasters/')
   strm   <- paste0(getwd(), '/dsmartOuts/models/')
-  strs   <- paste0(getwd(), '/dsmartOuts/summaries/')
   crs    <- indata@proj4string
-  nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
   
   # used later to set consistent factoring across model runs
-  all_classes  <- na.omit(unique(unlist(indata@data[, grep('CLASS', names(indata@data))])))
+  all_classes  <- sort(na.omit(unique(unlist(indata@data[, grep('CLASS', names(indata@data))]))))
   class_levels <- as.factor(all_classes)
+  
+  # count classes per polygon
+  indata$cl_count <- apply(indata@data, MARGIN = 1, FUN = function(x) {
+    sum(!is.na(x) & grepl('CLASS', names(polygons@data)) == T)
+  })
   
   pb <- txtProgressBar(min = 0, max = reals, style = 3)
   
@@ -85,10 +84,11 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       
       polyid  <- indata@data[i, c(pid_field)] 
       area    <- as.integer(indata@polygons[[i]]@area)
+      poly_cl <- as.integer(indata@data[i, c('cl_count')])
       
       # rate - samples per sq km
-      minrate <- nclass * 5
-      nsamp   <- ceiling(area / (1000000 / sample_rate))
+      minrate <- poly_cl * 10
+      nsamp   <- ceiling(area / (1000000 / minrate))
       nsamp   <- max(minrate, nsamp)
       
       # NB spsample docs say non-spherical coordinates are required, but it doesn't seem to
@@ -101,7 +101,8 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
       # NB setting size to = length(spoints) below instead of nsamp handles cases where spsample
       # fails to place nsamp points - usually only an issue if you switch from random to 
       # other sampling types, and possibly with very small/irregular polygons
-      classdata <- sample(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])),
+      polyclassnames <- as.vector(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])))
+      classdata <- sample(polyclassnames,
                           size     = length(spoints),
                           replace  = TRUE,
                           prob     = s[1, ])
@@ -140,8 +141,8 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL, sampl
     all_samplepoints <- raster::extract(covariates, all_samplepoints, sp = TRUE)
     
     # forces all outputs to be on the same scale eg. raster value 1 always equals factor level 1
-    all_samplepoints@data$CLASS         <- as.factor(all_samplepoints@data$CLASS) 
-    levels(all_samplepoints@data$CLASS) <- class_levels
+    all_samplepoints$CLASS         <- as.factor(all_samplepoints$CLASS) 
+    levels(all_samplepoints$CLASS) <- class_levels
     
     # ditch any points with NA values in the extracted covariate data, C5.0 does not approve
     all_samplepoints <- all_samplepoints[complete.cases(all_samplepoints@data), ]
