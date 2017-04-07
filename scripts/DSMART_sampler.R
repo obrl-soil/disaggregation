@@ -5,21 +5,27 @@
 #  * wrong column names
 #  * a row where n classes doesn't match n percs
 
-DSMART_sampler <- function(indata = NULL, pid_field = NULL, sample_rate = NULL, obsdat = NULL) {
+DSMART_sampler <- function(indata = NULL, pid_field = NULL, obsdat = NULL) {
 
-nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
-crs    <- indata@proj4string
-sample_points <- list()
+  nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
+  crs    <- indata@proj4string
+  sample_points <- vector("list", length = length(polygons))
 
-# sampling loop (one polygon at a time)
-for (i in 1:length(indata@polygons)) { 
+  # count classes per polygon
+  indata$cl_count <- apply(indata@data, 1, function(x) {
+    sum(!is.na(x) & grepl('CLASS', names(polygons@data)) == T)
+  })
+      
+  # sampling loop (one polygon at a time)
+  for (i in 1:length(indata@polygons)) { 
     
     polyid  <- indata@data[i, c(pid_field)] 
     area    <- as.integer(indata@polygons[[i]]@area)
+    poly_cl <- as.integer(indata@data[i, c('cl_count')])
     
     # samples per sq km
-    minrate <- nclass * 5
-    nsamp   <- ceiling(area / (1000000 / sample_rate))
+    minrate <- poly_cl * 10
+    nsamp   <- ceiling(area / (1000000 / minrate))
     nsamp   <- max(minrate, nsamp)
     
     # sample dat polygon
@@ -29,7 +35,8 @@ for (i in 1:length(indata@polygons)) {
     s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])))
     
     # assign classes to spoints
-    classdata <- sample(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])),
+    polyclassnames <- as.vector(na.omit(unlist(indata@data[i, c(grep('CLASS', names(indata@data)))])))
+    classdata <- sample(polyclassnames,
                         size = length(spoints), 
                         replace = TRUE, 
                         prob = s[1, ])
