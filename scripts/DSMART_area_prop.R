@@ -69,7 +69,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
   
   # count classes per polygon
   indata$cl_count <- apply(indata@data, MARGIN = 1, FUN = function(x) {
-    sum(!is.na(x) & grepl('CLASS', names(polygons@data)) == T)
+    sum(!is.na(x) & grepl('CLASS', names(indata@data)) == T)
   })
   
   pb <- txtProgressBar(min = 0, max = reals, style = 3)
@@ -77,7 +77,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
   for (j in 1:reals) {
     
     beginCluster(cpus)
-    sample_points <- vector('list', length = length(polygons))
+    sample_points <- vector('list', length = length(indata))
     
     # sampling loop (one polygon at a time)
     for (i in 1:length(indata@polygons)) { 
