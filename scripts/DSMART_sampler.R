@@ -9,11 +9,11 @@ DSMART_sampler <- function(indata = NULL, pid_field = NULL, obsdat = NULL) {
 
   nclass <- length(names(indata@data)[grep('CLASS', names(indata@data))])
   crs    <- indata@proj4string
-  sample_points <- vector("list", length = length(polygons))
+  sample_points <- vector("list", length = length(indata))
 
   # count classes per polygon
   indata$cl_count <- apply(indata@data, 1, function(x) {
-    sum(!is.na(x) & grepl('CLASS', names(polygons@data)) == T)
+    sum(!is.na(x) & grepl('CLASS', names(indata@data)) == T)
   })
       
   # sampling loop (one polygon at a time)
