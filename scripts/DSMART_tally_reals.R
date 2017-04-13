@@ -31,7 +31,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
   if (!dir.exists("dsmartOuts/summaries")) {
       dir.create("dsmartOuts/summaries", showWarnings = F)
   }
-  strs    <- paste0(getwd(), "/dsmartOuts/summaries/")
+  strs    <- file.path(getwd(), 'dsmartOuts', 'summaries')
   classes <- nrow(lookup)
   realn   <- nlayers(realstack)
   
@@ -96,7 +96,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
   
   if (keep_tallies == TRUE) { 
     writeRaster(counts,
-                filename  = paste0(strs, 'class_counts.tif'),
+                filename  = file.path(strs, 'class_counts.tif'),
                 datatype  = 'INT2S',
                 format    = 'GTiff',
                 NAflag    = -9999,
@@ -115,7 +115,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
   
   if (keep_tallies == TRUE) { 
     writeRaster(probs,
-                filename  = paste0(strs, 'class_props.tif'),
+                filename  = file.path(strs, 'class_props.tif'),
                 datatype  = 'FLT4S',
                 format    = 'GTiff',
                 NAflag    = -9999,
@@ -129,7 +129,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
   sorted  <- clusterR(x         = probs,
                       fun       = calc, 
                       args      = list(fun = stack_cell_sort),
-                      filename  = paste0(strs, 'class_probabilities_ranked.tif'),
+                      filename  = file.path(strs, 'class_probabilities_ranked.tif'),
                       datatype  = 'FLT4S',
                       format    = 'GTiff',
                       NAflag    = -9999,
@@ -149,7 +149,7 @@ tally_reals <- function(realstack = NULL, lookup = NULL, cpus = 1, keep_tallies 
     levels(ordered[[i]]) <- lookup
   }
   writeRaster(ordered,
-              filename  = paste0(strs, 'class_predictions_ranked.tif'),
+              filename  = file.path(strs, 'class_predictions_ranked.tif'),
               datatype   = 'INT2S',
               format    = 'GTiff',
               NAflag    = -9999,
