@@ -24,7 +24,7 @@ class_probs <- function(probstack = NULL, lookup = NULL, cpus = 1) {
   if (!dir.exists('dsmartOuts/summaries/class_maps/')) {
     dir.create('dsmartOuts/summaries/class_maps/', showWarnings = F)
   }
-  class_dir <- paste0(getwd(), '/dsmartOuts/summaries/class_maps/')
+  class_dir <- file.path(getwd(), 'dsmartOuts', 'summaries', 'class_maps')
 
   beginCluster(cpus)
   suppressWarnings(
@@ -38,7 +38,7 @@ class_probs <- function(probstack = NULL, lookup = NULL, cpus = 1) {
   prob_tifs <- lapply(probs_list, 
                       FUN = function(x) {
                         writeRaster(x, 
-                                    filename = paste0(class_dir, names(x), "_probability.tif"),
+                                    filename = file.path(class_dir, paste0(names(x), "_probability.tif")),
                                     format = "GTiff",
                                     NAflag = -9999,
                                     datatype = 'FLT4S',
