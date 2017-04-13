@@ -36,7 +36,7 @@ eval_nclasses <- function(class_predictions = NULL, cpus = 1, noise_cutoff = 0.1
   if (!dir.exists("dsmartOuts/evaluation")) {
       dir.create("dsmartOuts/evaluation", showWarnings = F)
   }
-  strs    <- paste0(getwd(), "/dsmartOuts/evaluation/")
+  strs    <- file.path(getwd(), 'dsmartOuts', 'evaluation')
   
   # per-cell functions
   n_classes_predicted <- function(x) { 
@@ -63,7 +63,7 @@ eval_nclasses <- function(class_predictions = NULL, cpus = 1, noise_cutoff = 0.1
   npred <- clusterR(class_predictions,
                     fun = calc,
                     args = list(fun = n_classes_predicted),
-                    filename = paste0(strs, 'n_classes_predicted.tif'),
+                    filename = file.path(strs, 'n_classes_predicted.tif'),
                     NAflag = -9999,
                     datatype = 'INT2S',
                     overwrite = TRUE)
@@ -73,7 +73,7 @@ eval_nclasses <- function(class_predictions = NULL, cpus = 1, noise_cutoff = 0.1
   npredx <- clusterR(class_predictions,
                      fun = calc, args = list(fun = n_classes_predicted_x),
                      export = c('nreals', 'noise_cutoff'),
-                     filename = paste0(strs, 'n_classes_predicted_over_', (nreals * noise_cutoff), '.tif'),
+                     filename = file.path(strs, paste0('n_classes_predicted_over_', (nreals * noise_cutoff), '.tif')),
                      datatype = 'INT2S',
                      NAflag = -9999,
                      overwrite = TRUE)
