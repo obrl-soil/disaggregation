@@ -31,7 +31,7 @@ n_most_probs <- function(class_predictions = NULL, class_probabilities = NULL, l
   if (!dir.exists('dsmartOuts/summaries/most_probable_maps/')) { 
     dir.create('dsmartOuts/summaries/most_probable_maps/', showWarnings = F)
   }
-  mp_dir <- paste0(getwd(), '/dsmartOuts/summaries/most_probable_maps/') 
+  mp_dir <- file.path(getwd(), 'dsmartOuts', 'summaries', 'most_probable_maps') 
 
   beginCluster(cpus)
 
@@ -52,7 +52,7 @@ n_most_probs <- function(class_predictions = NULL, class_probabilities = NULL, l
   
   outs_list <- mapply(FUN = function(x, i) {
     writeRaster(x, 
-                filename  = paste0(mp_dir, 'mostlikely_', i ,'.tif'),
+                filename  = file.path(mp_dir, paste0('mostlikely_', i ,'.tif')),
                 format    = 'GTiff',
                 NAflag    = -9999,
                 datatype  = 'INT2S',
@@ -74,7 +74,7 @@ n_most_probs <- function(class_predictions = NULL, class_probabilities = NULL, l
   
   probsouts_list <- mapply(FUN = function(x, i) {
     writeRaster(x,
-                filename = paste0(mp_dir, "mostlikely_prob_", i, '.tif'),
+                filename = file.path(mp_dir, paste0('mostlikely_prob_', i, '.tif')),
                 format = 'GTiff',
                 datatype = 'FLT4S',
                 NAflag = -9999,
