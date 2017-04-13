@@ -58,9 +58,9 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
   dir.create('dsmartOuts/rasters',   showWarnings = FALSE)
   dir.create('dsmartOuts/models',    showWarnings = FALSE)
   
-  strd   <- paste0(getwd(), '/dsmartOuts/samples/')
-  strr   <- paste0(getwd(), '/dsmartOuts/rasters/')
-  strm   <- paste0(getwd(), '/dsmartOuts/models/')
+  strd   <- file.path(getwd(), 'dsmartOuts', 'samples')
+  strr   <- file.path(getwd(), 'dsmartOuts', 'rasters')
+  strm   <- file.path(getwd(), 'dsmartOuts', 'models')
   crs    <- indata@proj4string
   
   # used later to set consistent factoring across model runs
@@ -163,16 +163,16 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
     levels(r1) <- lookup
     
     # save for later (readALL or your raster rds' will just be pointers to temp files)
-    saveRDS(all_samplepoints, paste0(strd, 'samples_', j, '.rds'))
-    saveRDS(res, paste0(strm, 'C5_model_', j, '.rds'))
-    suppressWarnings(saveRDS(readAll(r1), paste0(strr, 'map_', j, '.rds')))
+    saveRDS(all_samplepoints, file.path(strd, paste0('samples_', j, '.rds')))
+    saveRDS(res, file.path(strm, paste0('C5_model_', j, '.rds')))
+    suppressWarnings(saveRDS(readAll(r1), file.path(strr, paste0('map_', j, '.rds'))))
     
     # make it optional to write rasters and shapefiles etc
     if (write_files == TRUE) {
       
       # decision tree to plain text tho lets bh the rds is more useful
       out <- capture.output(summary(res))
-      f2  <- paste0(strm, 'C5_model_', j, '.txt')
+      f2  <- file.path(strm, paste0('C5_model_', j, '.csv'))
       cat(out, file = f2, sep = '\n', append = TRUE)
       
       # write probability map from this realisation to GeoTIFF (lookup values are embedded)
@@ -182,19 +182,19 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
       
       # may as well keep the class lookup in txt as can't use it in QGIS
         if (j == 1) {
-          write.table(lookup, paste0(strr, 'class_lookup.txt'), 
+          write.table(lookup, file.path(strr, 'class_lookup.txt'), 
                       col.names = TRUE, row.names = FALSE,
                       quote = FALSE, sep = ',')
         }
             
       # make a lookup table for all_samplepoints covariate column names, because they're about
       # to get severely abbreviated for writing to shp
-      cov_LUT_nm <- paste0(strd, 'covariate_LUT.csv')
+      cov_LUT_nm <- file.path(strd, 'covariate_LUT.csv')
       cov_names <- names(all_samplepoints[6:ncol(all_samplepoints)])
       cov_shpnames <- paste0('COV_', 1:length(cov_names))
       if (!file.exists(cov_LUT_nm)) {
         cov_LUT <- data.frame('COV_NAMES' = cov_names, 'SHPCOL_NAMES' = cov_shpnames)
-        write.table(cov_LUT, file=cov_LUT_nm, 
+        write.table(cov_LUT, file = cov_LUT_nm, 
                     sep = ', ', quote = FALSE, col.names = TRUE, row.names = FALSE)
       }
       
@@ -202,7 +202,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
       names(all_samplepoints)[6:ncol(all_samplepoints)] <- cov_shpnames
       spname <- paste0('samplepoints_', j)
       writeOGR(all_samplepoints,
-               dsn = paste0(getwd(), '/dsmartOuts/samples'),
+               dsn = file.path(getwd(), 'dsmartOuts', 'samples'),
                layer = spname,
                driver = 'ESRI Shapefile',
                overwrite = TRUE)
