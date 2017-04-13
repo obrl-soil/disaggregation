@@ -24,12 +24,12 @@ eval_confind <- function(class_probabilities = NULL, cpus = 1) {
   if (!dir.exists("dsmartOuts/evaluation")) {
       dir.create("dsmartOuts/evaluation", showWarnings = F)
   }
-  strs    <- paste0(getwd(), "/dsmartOuts/evaluation/")
+  strs    <- file.path(getwd(), 'dsmartOuts', 'evaluation')
   
   beginCluster(cpus)
   confus_ind  <- clusterR(na.omit(class_probabilities),
                           fun       = conf_index,
-                          filename  = paste0(strs, 'confusion_index.tif'),
+                          filename  = file.path(strs, 'confusion_index.tif'),
                           datatype  = 'FLT4S',
                           NAflag    = -9999,
                           overwrite = TRUE)
