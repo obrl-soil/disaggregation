@@ -9,7 +9,7 @@
 #                                                                                                  #
 #  Usage                                                                                           #
 #  DSMART_AP(covariates = NULL, indata = NULL, pid_field = NULL,  obsdat = NULL, reals = NULL,     #
-#            cpus = 1, write_files = FALSE)                                                        #
+#            t_factor = 10000, cpus = 1, write_files = FALSE)                                      #
 #                                                                                                  #
 #  Arguments                                                                                       #
 #  covariates   RasterStack; A stack of grids or rasters that are surrogates for environmental     #
@@ -38,9 +38,11 @@
 #                    $ SAMP_Y : num or int <Y coordinate of site>                                  #
 #                    $ CLASS  : chr <soil name, must occur in indata>                              #
 #                                                                                                  #
-#  reals        Numeric; number of C5 modeling fitting and mapping realisations to implement.      #
+#  reals        Integer; number of C5 modeling fitting and mapping realisations to implement.      #
 #                                                                                                  #
-#  cpus         Numeric; number of compute nodes to use. Default is 1.                             #
+#  t_factor     Integer; a modifier to clamp extreme values from rdirichlet. Default is 10000.     #
+#                                                                                                  #
+#  cpus         Integer; number of compute nodes to use. Default is 1.                             #
 #                                                                                                  #
 #  write_files  Logical; default FALSE. Model outputs are saved as rds objects by default. Set     #
 #               this parameter to TRUE to write the c5 model as text, the sampled points and       #
@@ -96,7 +98,7 @@ DSMART_AP <- function (covariates = NULL, indata = NULL, pid_field = NULL,
       spoints <- spsample(indata[i, ], n = nsamp, type = 'random', iter = 10)
       
       # get proportions for assigning classes to spoints
-      s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])))
+      s <- rdirichlet(1, na.omit(unlist(indata@data[i, c(grep('PERC', names(indata@data)))])) * t_factor)
       
       # NB setting size to = length(spoints) below instead of nsamp handles cases where spsample
       # fails to place nsamp points - usually only an issue if you switch from random to 
